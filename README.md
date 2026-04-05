@@ -4,7 +4,7 @@ Scaling automated analysis of Earth Observation (EO) data is critical for enviro
 
 The EarthDial Dataset bridges this gap with **11M+ multimodal instruction-tuning pairs** across RGB, SAR, and multispectral imagery, enabling conversational EO systems for classification, detection, captioning, and reasoning.
 
-This project fine-tunes Gemma 3 4B IT for **scene classification**, using an EarthDial subset derived from the FAIR1M benchmark. FAIR1M is a large-scale, high-resolution remote sensing dataset designed for fine-grained object recognition, featuring diverse scenes with complex spatial patterns, scale variation, and object orientations.
+This project fine-tunes Gemma 3 4B IT for **scene classification**, using an EarthDial subset derived from [BigEarthNet](https://bigearth.net/), a large-scale Sentinel benchmark archive containing multi-label land-use and land-cover classification samples from Sentinel-1 and Sentinel-2 imagery across diverse European landscapes.
 
 Using **LoRA fine-tuning** with JAX/Flax and Tunix, the model learns to accurately interpret land-cover patterns and classify satellite imagery across diverse EO scenarios.
 
@@ -53,6 +53,7 @@ src/gemma_earth/config.py      # Config via .env
 ## Setup
 
 ```bash
+git clone https://github.com/haruiz/gemma_earth
 uv sync
 cp .env.example .env
 ```
@@ -212,7 +213,7 @@ This project builds upon:
 
 * EarthDial Dataset
 * Gemma 3 4B IT by Google
-* FAIR1M dataset for high-resolution remote sensing benchmarks
+* [BigEarthNet](https://bigearth.net/) — A Large-Scale Sentinel Benchmark Archive for remote sensing scene classification
 * The open-source JAX/Flax ecosystem
 
 ## Citation
@@ -225,7 +226,7 @@ If you use this project, please cite:
   author={Henry Ruiz Guzman},
   year={2026},
   howpublished={GitHub repository},
-  url={https://github.com/<your-username>/gemma-earth}
+  url={https://github.com/haruiz/gemma_earth}
 }
 ```
 
@@ -243,15 +244,16 @@ If you use this project, please cite:
   url={https://arxiv.org/abs/2412.15190}
 }
 
-@misc{sun2021fair1m,
-  title={FAIR1M: A Benchmark Dataset for Fine-grained Object Recognition in High-Resolution Remote Sensing Imagery},
-  author={Sun, Xian and Wang, Peijin and Yan, Zhiyuan and Xu, Feng and Wang, Ruiping and Diao, Wenhui and Chen, Jin and Li, Jihao and Feng, Yingchao and Xu, Tao and others},
-  year={2021},
-  eprint={2103.05569},
+
+@misc{sumbul2019bigearthnet,
+  title={BigEarthNet: A Large-Scale Benchmark Archive For Remote Sensing Image Understanding},
+  author={Sumbul, Gencer and Charfuelan, Marcela and Demir, Beg{\"u}m and Markl, Volker},
+  year={2019},
+  eprint={1902.06148},
   archivePrefix={arXiv},
   primaryClass={cs.CV},
-  doi={10.48550/arXiv.2103.05569},
-  url={https://arxiv.org/abs/2103.05569}
+  doi={10.48550/arXiv.1902.06148},
+  url={https://arxiv.org/abs/1902.06148}
 }
 
 @misc{tunix2025,
@@ -262,7 +264,6 @@ If you use this project, please cite:
 }
 
 ```
-
 
 ## Acknowledgements
 
