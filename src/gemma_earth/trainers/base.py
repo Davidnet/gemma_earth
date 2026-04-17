@@ -448,14 +448,14 @@ class GemmaEarth(ABC):
 
     def _build_sampler(
         self,
-        lora_model: nnx.Module,
+        transformer_model: nnx.Module,
         tokenizer: tokenizer_lib.Tokenizer,
         image_processor: image_processor_lib.ImageProcessor,
     ) -> sampler_lib.Sampler:
         """Create the sampler used for autoregressive generation.
 
         Args:
-            lora_model: LoRA-augmented model used as sampler transformer.
+            transformer_model: LoRA-augmented model used as sampler transformer.
             tokenizer: Tokenizer used to encode/decode text tokens.
             image_processor: Vision preprocessor for multimodal image inputs.
 
@@ -469,7 +469,7 @@ class GemmaEarth(ABC):
             head_dim=self.model_config.head_dim,
         )
         return sampler_lib.Sampler(
-            transformer=lora_model,
+            transformer=transformer_model,
             tokenizer=tokenizer,
             cache_config=cache_config,
             image_processor=image_processor,
@@ -592,6 +592,82 @@ class GemmaEarth(ABC):
         finally:
             manager.close()
 
+
+    def benchmark(self, num_examples: int) -> list[dict[str, Any]]:
+        """Run inference on num_examples samples with both the base and fine-tuned
+        LoRA models and return a list of result dicts.
+
+        Args:
+            num_examples: Number of elements to evaluate.
+
+        Returns:
+            List of dicts with keys: index, prompt, ground_truth,
+            base_model_output, finetuned_model_output.
+        """
+        if num_examples <= 0:
+            raise ValueError("num_examples must be greater than 0")
+
+        mesh = self.create_mesh()
+
+        # load baseline model
+        self.load_base_model(mesh=mesh)
+        base_model = self.base_model
+        logger.info("Baseline model loaded.")
+
+        # load fine-tuned LoRA model
+        lora_model = self.build_lora_model(mesh=mesh)
+        restored_step = self._restore_latest_checkpoint(lora_model)
+        logger.info("Loaded checkpoint step: %d", restored_step)
+
+        # build sampler with loaded model and tokenizer/image processor
+        tokenizer = self._build_tokenizer()
+        image_processor = self._build_image_processor()
+        base_model_sampler = self._build_sampler(
+            transformer_model=base_model,
+            tokenizer=tokenizer,
+            image_processor=image_processor,
+        )
+
+        lora_model_sampler = self._build_sampler(
+            transformer_model=lora_model,
+            tokenizer=tokenizer,
+            image_processor=image_processor,
+        )
+
+        ds = self.dataset.load_test_split()
+        results: list[dict[str, Any]] = []
+
+        for idx in range(min(num_examples, len(ds))):
+            user_text, gt_text, image = self.dataset.load_eval_sample(ds, idx)
+            prompt = self.dataset.build_eval_prompt(user_text)
+            image_array = [np.asarray(image)]
+            sampler_kwargs = dict(
+                input_strings=[prompt],
+                images=image_array,
+                max_generation_steps=96,
+                max_prompt_length=self.settings.max_seq_length,
+                temperature=0.0,
+            )
+
+            base_output = self._clean_output(base_model_sampler(**sampler_kwargs).text[0])
+            finetuned_output = self._clean_output(lora_model_sampler(**sampler_kwargs).text[0])
+
+            results.append({
+                "index": idx,
+                "prompt": prompt,
+                "ground_truth": gt_text,
+                "base_model_output": base_output,
+                "finetuned_model_output": finetuned_output,
+            })
+            logger.info(
+                "[%d/%d] base: %s | finetuned: %s",
+                idx + 1, num_examples, base_output[:80], finetuned_output[:80],
+            )
+
+        return results
+
+
+
     def eval(self, start_index: int, num_examples: int) -> list[dict[str, Any]]:
         """Run inference for a range of examples using the latest output checkpoint.
 
@@ -614,15 +690,16 @@ class GemmaEarth(ABC):
         tokenizer = self._build_tokenizer()
         image_processor = self._build_image_processor()
         sampler = self._build_sampler(
-            lora_model=lora_model,
+            transformer_model=lora_model,
             tokenizer=tokenizer,
             image_processor=image_processor,
         )
 
-        ds = load_from_disk(self.settings.dataset_dir)
+        ds = self.dataset.load_test_split()
         results: list[dict[str, Any]] = []
+        actual_count = min(start_index + num_examples, len(ds))
 
-        for idx in range(start_index, start_index + num_examples):
+        for idx in range(start_index, actual_count):
             user_text, gt_text, image = self.dataset.load_eval_sample(ds, idx)
             prompt = self.dataset.build_eval_prompt(user_text)
 
@@ -643,6 +720,7 @@ class GemmaEarth(ABC):
             })
 
         return results
+
 
     def train(self) -> None:
         """Run the full training pipeline from data prep through trainer execution.

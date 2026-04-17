@@ -22,6 +22,7 @@ dependencies = [
  "qwix",
  "rich>=14.3.3",
  "rich-pixels>=3.0.1",
+ "scikit-learn>=1.8.0",
  "setuptools>=82.0.1",
  "tensorboard>=2.20.0",
  "tpu-info>=0.10.0",

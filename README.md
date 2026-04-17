@@ -278,11 +278,76 @@ results.json
 * `strict` means full checkpoint restore only: all expected parameters must match and load successfully. If there is a mismatch (for example missing keys, unexpected keys, or incompatible shapes), restore fails.
 * `permissive` means partial checkpoint restore is allowed: compatible parameters are loaded, and non-matching parameters are skipped (typically staying at initialized values).
 * `permissive` restore works for both checkpoint sources (`tunix` and `huggingface`).
-* `scripts/one_example_eval.py` supports both `tunix` and `huggingface`.
 
-Use consistent `.env` profiles to avoid mismatches.
+## Benchmark Workflow (JSON + Metrics + Plots)
 
-## Recommended Workflow
+Run benchmark inference to compare baseline and fine-tuned outputs and save
+`benchmark_results.json`:
+
+```bash
+python main.py benchmark \
+  --num-examples 1500 \
+  --eval-restore-policy permissive \
+  --model-checkpoint-source huggingface
+```
+
+Generate the benchmark metrics report (`metrics_report.json`) using scikit-learn:
+
+```bash
+uv run python scripts/generate_metrics.py \
+  --input benchmark_results.json \
+  --output metrics_report.json
+```
+
+Generate interpretation plots from benchmark + metrics:
+
+```bash
+uv run python scripts/plot_benchmark_metrics.py \
+  --benchmark benchmark_results.json \
+  --metrics metrics_report.json \
+  --out-dir plots \
+  --top-k 15
+```
+
+Generated artifacts:
+
+```bash
+benchmark_results.json
+metrics_report.json
+plots/metrics_comparison.png
+plots/improvement_absolute.png
+plots/jaccard_distribution.png
+plots/per_class_recall_topk.png
+plots/win_tie_loss.png
+```
+
+## Benchmark Results (1500 samples)
+
+| Metric | Baseline | Fine-tuned | Delta (absolute) | Delta (relative) | Trend |
+| --- | ---: | ---: | ---: | ---: | :---: |
+| Exact Match | 2.53% | 22.80% | +20.27 pp | +800.00% | ⬆️ |
+| Sample Precision | 27.27% | 68.53% | +41.27 pp | +151.35% | ⬆️ |
+| Sample Recall | 10.35% | 71.86% | +61.51 pp | +594.40% | ⬆️ |
+| Sample F1 | 14.18% | 68.16% | +53.98 pp | +380.79% | ⬆️ |
+| Sample Jaccard | 10.35% | 57.47% | +47.12 pp | +455.34% | ⬆️ |
+| Micro Precision | 29.57% | 63.56% | +33.99 pp | +114.94% | ⬆️ |
+| Micro Recall | 9.25% | 67.00% | +57.75 pp | +624.69% | ⬆️ |
+| Micro F1 | 14.09% | 65.24% | +51.15 pp | +363.11% | ⬆️ |
+| Macro F1 | 6.53% | 31.50% | +24.97 pp | +382.53% | ⬆️ |
+
+Legend: ⬆️ improvement, ⬇️ decline.
+
+Interpretation: the fine-tuned model substantially outperforms the baseline across all metrics, with the largest gains in recall-oriented metrics (`sample_recall`, `micro_recall`) and strong gains in overlap/quality metrics (`sample_f1`, `sample_jaccard`, `micro_f1`). The increase in `macro_f1` indicates improvements are not limited to only the most frequent classes, while the jump in exact match confirms better full-label-set prediction consistency.
+
+### Metrics Comparison Figure
+
+![Baseline vs Fine-tuned Metrics](plots/metrics_comparison.png)
+
+### Absolute Improvement Figure
+
+![Absolute Improvement by Metric](plots/improvement_absolute.png)
+
+## Getting started guide
 
 **Standard workflow**
 

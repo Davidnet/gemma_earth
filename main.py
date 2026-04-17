@@ -58,6 +58,23 @@ def eval(
         json.dump(results, fp, indent=4)
 
 
+def benchmark(
+    num_examples: int = 30,
+    restore_policy: Literal["strict", "permissive"] = "permissive",
+    model_checkpoint_source: Literal["tunix", "huggingface"] | None = None,
+) -> None:
+    """Run model benchmark and write JSON results."""
+    configure_runtime()
+
+    gemma_earth = create_trainer(
+        restore_policy=restore_policy,
+        model_source=model_checkpoint_source,
+    )
+    results = gemma_earth.benchmark(num_examples=num_examples)
+    with open("benchmark_results.json", "w") as fp:
+        json.dump(results, fp, indent=4)
+
+
 def dataset_info() -> None:
     """Print EarthDial remote size and local number of entries."""
     configure_runtime()
@@ -84,8 +101,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Gemma Earth runner")
     parser.add_argument(
         "command",
-        choices=["train", "eval", "dataset-info"],
-        help="Whether to run training, evaluation, or dataset info.",
+        choices=["train", "eval", "benchmark", "dataset-info"],
+        help="Whether to run training, evaluation, benchmark, or dataset info.",
     )
     parser.add_argument(
         "--start-index",
@@ -129,6 +146,14 @@ def main() -> None:
 
     if args.command == "dataset-info":
         dataset_info()
+        return
+
+    if args.command == "benchmark":
+        benchmark(
+            num_examples=args.num_examples,
+            restore_policy=args.eval_restore_policy,
+            model_checkpoint_source=selected_model_source,
+        )
         return
 
     eval(

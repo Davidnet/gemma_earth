@@ -31,6 +31,8 @@ class EarthDialDataset:
             None.
         """
         self.settings = settings or Settings()
+        self.train_split_raw: Any | None = None
+        self.val_split_raw: Any | None = None
 
     def get_dataset_size_bytes(self) -> None | int | Literal[0]:
         """Return total size in bytes of EarthDial dataset files matching the allow pattern.
@@ -350,19 +352,6 @@ class EarthDialDataset:
 
         return prompt, chosen_response, len(human_text) == 0, len(model_text) == 0
 
-    def build_eval_prompt(self, user_text: str) -> str:
-        """Build an evaluation prompt from one user text instruction.
-
-        Args:
-            user_text: Raw user instruction/content.
-
-        Returns:
-            Gemma-formatted multimodal prompt ending with `<start_of_turn>model`.
-        """
-        prompt, _, _, _ = self._format_prompt_and_response(
-            conversations=[{"from": "user", "value": user_text}]
-        )
-        return prompt
 
     def load_eval_sample(self, ds: Any, idx: int) -> tuple[str, str, Any]:
         """Load one evaluation sample from an already-loaded dataset.
@@ -399,6 +388,56 @@ class EarthDialDataset:
 
         return user_text, gt_text, decode_image(sample["jpg"])
 
+    def build_eval_prompt(self, user_text: str) -> str:
+        """Format user text into a Gemma-compatible evaluation prompt.
+
+        Wraps the user text with the image placeholder (256 <img> tokens) and
+        Gemma turn markers, ready for inference.
+
+        Args:
+            user_text: User question or instruction text.
+
+        Returns:
+            Formatted prompt string ending with <start_of_turn>model marker.
+        """
+        return (
+            "<start_of_turn>user\n"
+            + "<start_of_image>"
+            + "<img>" * 256
+            + "<end_of_image>\n\n"
+            + user_text
+            + "<end_of_turn>\n"
+            + "<start_of_turn>model\n"
+        )
+
+    def load_test_split(self) -> Any:
+        """Load and return only the test/validation split of the dataset.
+
+        Mirrors the splitting logic from build() to ensure consistency:
+        loads the full dataset, applies sample limit, shuffles, and splits
+        using the same ratio and seed.
+
+        Returns:
+            HuggingFace Dataset containing only the test split.
+        """
+        settings = self.settings
+        ds = load_from_disk(settings.dataset_dir)
+        logger.info("Dataset loaded with %d samples.", len(ds))
+
+        sample_limit = len(ds) if settings.num_samples is None else min(len(ds), settings.num_samples)
+        ds = ds.shuffle(seed=settings.shuffle_seed).select(range(sample_limit))
+
+        validation_size = self._compute_validation_size(sample_limit)
+        split_ds = ds.train_test_split(
+            test_size=validation_size,
+            seed=settings.shuffle_seed,
+            shuffle=True,
+        )
+
+        test_split = split_ds["test"]
+        logger.info("Test split loaded with %d samples.", len(test_split))
+        return test_split
+
     def _to_training_example(self, x: dict[str, Any], image_processor: Any) -> dict[str, Any]:
         """Transform a raw dataset row into text and image fields for SFT training.
 
@@ -428,6 +467,7 @@ class EarthDialDataset:
             "human_empty": human_empty,
             "model_empty": model_empty,
         }
+
 
     def _to_training_input(
         self,
@@ -476,7 +516,7 @@ class EarthDialDataset:
             images=np.asarray(x["images"], dtype=np.float32),
         )
 
-    def _build_pipeline(
+    def _build_train_pipeline(
         self,
         split: Any,
         image_processor: Any,
@@ -515,6 +555,8 @@ class EarthDialDataset:
             .repeat(num_epochs)
             .to_iter_dataset()
         )
+
+
 
     def build(
         self,
@@ -555,6 +597,9 @@ class EarthDialDataset:
         train_split = split_ds["train"]
         val_split = split_ds["test"]
 
+        self.train_split_raw = train_split
+        self.val_split_raw = val_split
+
         logger.info(
             "Using %d sampled rows: %d train / %d validation.",
             sample_limit,
@@ -562,7 +607,7 @@ class EarthDialDataset:
             len(val_split),
         )
 
-        train_dataset = self._build_pipeline(
+        train_dataset = self._build_train_pipeline(
             split=train_split,
             image_processor=image_processor,
             tokenizer=tokenizer,
@@ -570,7 +615,7 @@ class EarthDialDataset:
             split_name="train",
         )
 
-        val_dataset = self._build_pipeline(
+        val_dataset = self._build_train_pipeline(
             split=val_split,
             image_processor=image_processor,
             tokenizer=tokenizer,

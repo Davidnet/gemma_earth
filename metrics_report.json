@@ -1,0 +1,67 @@
+{
+  "input_file": "benchmark_results.json",
+  "num_samples": 1500,
+  "task": "satellite_scene_classification_multilabel",
+  "baseline": {
+    "samples": 1500,
+    "exact_match": 0.025333333333333333,
+    "sample_precision": 0.27266666666666667,
+    "sample_recall": 0.10348174603174601,
+    "sample_f1": 0.14176243386243387,
+    "sample_jaccard": 0.10348174603174601,
+    "micro_precision": 0.2957339117859725,
+    "micro_recall": 0.09245027124773961,
+    "micro_f1": 0.14086447391079732,
+    "macro_f1": 0.06528600052949703
+  },
+  "finetuned": {
+    "samples": 1500,
+    "exact_match": 0.228,
+    "sample_precision": 0.6853476190476191,
+    "sample_recall": 0.7185769841269842,
+    "sample_f1": 0.6815789617789617,
+    "sample_jaccard": 0.574675925925926,
+    "micro_precision": 0.6356422903710058,
+    "micro_recall": 0.6699819168173599,
+    "micro_f1": 0.6523605150214592,
+    "macro_f1": 0.31502336389283275
+  },
+  "improvement": {
+    "exact_match": {
+      "absolute": 0.20266666666666666,
+      "relative_percent": 800.0
+    },
+    "sample_precision": {
+      "absolute": 0.4126809523809524,
+      "relative_percent": 151.34998253580164
+    },
+    "sample_recall": {
+      "absolute": 0.6150952380952383,
+      "relative_percent": 594.3997484411792
+    },
+    "sample_f1": {
+      "absolute": 0.5398165279165279,
+      "relative_percent": 380.7895457271602
+    },
+    "sample_jaccard": {
+      "absolute": 0.47119417989418,
+      "relative_percent": 455.3403841385007
+    },
+    "micro_precision": {
+      "absolute": 0.3399083785850333,
+      "relative_percent": 114.93723412789758
+    },
+    "micro_recall": {
+      "absolute": 0.5775316455696202,
+      "relative_percent": 624.6943765281172
+    },
+    "micro_f1": {
+      "absolute": 0.5114960411106619,
+      "relative_percent": 363.11216512586964
+    },
+    "macro_f1": {
+      "absolute": 0.24973736336333574,
+      "relative_percent": 382.52820105054724
+    }
+  }
+}
