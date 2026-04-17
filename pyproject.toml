@@ -24,7 +24,6 @@ dependencies = [
  "rich-pixels>=3.0.1",
  "scikit-learn>=1.8.0",
  "setuptools>=82.0.1",
- "tensorboard>=2.20.0",
  "tpu-info>=0.10.0",
  "uvicorn>=0.35.0",
  "vllm>=0.5.0.post1",

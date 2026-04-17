@@ -347,6 +347,12 @@ Interpretation: the fine-tuned model substantially outperforms the baseline acro
 
 ![Absolute Improvement by Metric](plots/improvement_absolute.png)
 
+### TensorBoard Training Metrics Figure
+
+![TensorBoard Training Metrics](plots/tensorboard-metrics.png)
+
+Interpretation: The model demonstrates stable and consistent learning throughout training, with evaluation loss decreasing from ~0.33 to ~0.22 and perplexity improving from ~1.45 to ~1.25. Both metrics show smooth convergence without instability, indicating effective optimization and no signs of overfitting. Performance gains begin to plateau after ~25k–30k steps, suggesting the model has largely converged and further training yields diminishing returns.
+
 ## Getting started guide
 
 **Standard workflow**
